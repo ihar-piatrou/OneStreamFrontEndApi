@@ -15,6 +15,6 @@
         /// <param name="cacheKey">The key used to store and retrieve the API response from the cache.</param>
         /// <param name="url">The URL of the API endpoint to call.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the API response as a string.</returns>
-        Task<string> CallApiAsync(string cacheKey, string url);
+        Task<string> CallApiAsync(string cacheKey, string? url);
     }
 }

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OneStreamFrontEndApi.Services;
+using System.Net;
+using System.Text.Json;
 
 namespace OneStreamFrontEndApi.Controllers
 {
@@ -8,32 +10,101 @@ namespace OneStreamFrontEndApi.Controllers
     public class FrontEndController : ControllerBase
     {
         private readonly IApiServices _frontEndServices;
-        
-        public FrontEndController(IApiServices frontEndServices)
+        private readonly IConfiguration _configuration;
+
+        public FrontEndController(IApiServices frontEndServices, IConfiguration configuration)
         {
             _frontEndServices = frontEndServices;
+            _configuration = configuration;
         }
 
         // GET: api/v1/FrontEnd
+        /// <summary>
+        /// Gets data from API1 and API2.
+        /// </summary>
+        /// <returns>Returns the responses from API2 and API3.</returns>
+        /// <response code="200">Returns the successful response from the API.</response>
+        /// <response code="502">Bad Gateway - Indicates an error occurred when calling an external API.</response>
+        /// <response code="401">Unauthorized - The request was not authorized.</response>
+        /// <response code="400">Bad Request - Invalid input was provided.</response>
+        /// <response code="404">Not Found - The resource was not found.</response>
+        /// <response code="429">To many requests - Indicates to many requests.</response>
+        /// <response code="500">Internal Server Error - A server error occurred.</response>
         [HttpGet]
+        [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadGateway)]
+        [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType((int)HttpStatusCode.TooManyRequests)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetAsync()
         {
             //var api2Responses = await _frontEndServices.CallApiAsync("api2Data429", "https://httpstat.us/502");
-
-            var api2Response = await _frontEndServices.CallApiAsync("api2Data", "https://catfact.ninja/fact");
-            var api3Response = await _frontEndServices.CallApiAsync("api3Data", "https://catfact.ninja/breeds");
-
-            return Ok(new { Api2 = api2Response, Api3 = api3Response });
+            var result = await GetResultsFrom2Apis();
+            return Ok(new { Api1 = result.Api1Response, Api2 = result.Api2Response });
         }
 
         // POST: api/v1/FrontEnd
+        /// <summary>
+        /// Post user data and data from API1 and API2 to file.
+        /// </summary>
+        /// <returns>Returns the responses from API2 and API3.</returns>
+        /// <response code="200">Returns the successful response from the API.</response>
+        /// <response code="502">Bad Gateway - Indicates an error occurred when calling an external API.</response>
+        /// <response code="401">Unauthorized - The request was not authorized.</response>
+        /// <response code="400">Bad Request - Invalid input was provided.</response>
+        /// <response code="404">Not Found - The resource was not found.</response>
+        /// <response code="429">To many requests - Indicates to many requests.</response>
+        /// <response code="500">Internal Server Error - A server error occurred.</response>
         [HttpPost]
-        public async Task<IActionResult> PostAsync([FromBody] object data)
+        [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadGateway)]
+        [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType((int)HttpStatusCode.TooManyRequests)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> PostAsync([FromBody] string data)
         {
-            var api2Response = await _frontEndServices.CallApiAsync("api2Data", "https://catfact.ninja/fact");
-            var api3Response = await _frontEndServices.CallApiAsync("api3Data", "https://catfact.ninja/breeds");
+            var result = await GetResultsFrom2Apis();
+            await WriteDataToFile(result.Api1Response, result.Api2Response, data);
 
-            return Ok(new { Api2 = api2Response, Api3 = api3Response, InputData = data });         
+            return Ok(new { Api1 = result.Api1Response, Api2 = result.Api2Response, InputData = data });         
+        }
+
+        private async Task<(string? Api1Response, string? Api2Response)> GetResultsFrom2Apis()
+        {
+            var api1Url = _configuration["ApiUrls:Api1"];
+            var api2Url = _configuration["ApiUrls:Api2"];
+
+            // Create tasks to call the APIs concurrently
+            var api1Task = _frontEndServices.CallApiAsync("api1Data", api1Url);
+            var api2Task = _frontEndServices.CallApiAsync("api2Data", api2Url);
+
+            // Await both tasks in parallel using Task.WhenAll
+            await Task.WhenAll(api1Task, api2Task);
+
+            // Get the results after both tasks have completed
+            return (await api1Task, await api2Task);
+        }
+
+        private async Task WriteDataToFile(string? api1Response, string? api2Response, string? userData)
+        {
+            // Write the result to a file
+            var outputFilePath = "results.txt";
+            var resultData = new
+            {
+                Api1 = api1Response,
+                Api2 = api2Response,
+                InputData = userData
+            };
+
+            // Convert the result data to a JSON string
+            var jsonResult = JsonSerializer.Serialize(resultData);
+
+            // Write the JSON string to a file
+            await System.IO.File.WriteAllTextAsync(outputFilePath, jsonResult);
         }
     }
 }
