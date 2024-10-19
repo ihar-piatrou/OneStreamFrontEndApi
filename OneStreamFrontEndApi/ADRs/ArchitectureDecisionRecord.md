@@ -78,8 +78,3 @@ The `ExceptionHandlingMiddleware` is registered in the pipeline to handle all ex
 ### 3. Logging with Serilog
 
 Logging is set up with Serilog, writing to both console and file. This provides easy-to-understand, structured logging that can help during development, troubleshooting, or even in production environments.
-
-## Related Issues
-
-- Need for distributed cache for scalability.
-- Centralized logging for distributed architecture (e.g., Elasticsearch, Kibana).
