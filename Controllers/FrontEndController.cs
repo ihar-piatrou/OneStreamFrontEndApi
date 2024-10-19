@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using OneStreamFrontEndApi.Services;
 using System.Net;
-using System.Text.Json;
 
 namespace OneStreamFrontEndApi.Controllers
 {
@@ -11,11 +10,13 @@ namespace OneStreamFrontEndApi.Controllers
     {
         private readonly IApiServices _frontEndServices;
         private readonly IConfiguration _configuration;
+        private readonly IFileServices _fileServices;
 
-        public FrontEndController(IApiServices frontEndServices, IConfiguration configuration)
+        public FrontEndController(IApiServices frontEndServices, IConfiguration configuration, IFileServices fileServices)
         {
             _frontEndServices = frontEndServices;
             _configuration = configuration;
+            _fileServices = fileServices;
         }
 
         // GET: api/v1/FrontEnd
@@ -67,10 +68,17 @@ namespace OneStreamFrontEndApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> PostAsync([FromBody] string data)
         {
-            var result = await GetResultsFrom2Apis();
-            await WriteDataToFile(result.Api1Response, result.Api2Response, data);
+            // Validate the length of the input data
+            if (string.IsNullOrEmpty(data) || data.Length < 5 || data.Length > 100)
+            {
+                return BadRequest(new { Error = "The data length must be between 5 and 100 characters." });
+            }
 
-            return Ok(new { Api1 = result.Api1Response, Api2 = result.Api2Response, InputData = data });         
+            // Proceed with the rest of the logic if validation passes
+            var result = await GetResultsFrom2Apis();
+            await _fileServices.WriteDataToFile(result.Api1Response, result.Api2Response, data);
+
+            return Ok(new { Api1 = result.Api1Response, Api2 = result.Api2Response, InputData = data });
         }
 
         private async Task<(string? Api1Response, string? Api2Response)> GetResultsFrom2Apis()
@@ -87,24 +95,6 @@ namespace OneStreamFrontEndApi.Controllers
 
             // Get the results after both tasks have completed
             return (await api1Task, await api2Task);
-        }
-
-        private async Task WriteDataToFile(string? api1Response, string? api2Response, string? userData)
-        {
-            // Write the result to a file
-            var outputFilePath = "results.txt";
-            var resultData = new
-            {
-                Api1 = api1Response,
-                Api2 = api2Response,
-                InputData = userData
-            };
-
-            // Convert the result data to a JSON string
-            var jsonResult = JsonSerializer.Serialize(resultData);
-
-            // Write the JSON string to a file
-            await System.IO.File.WriteAllTextAsync(outputFilePath, jsonResult);
         }
     }
 }

@@ -27,6 +27,7 @@ builder.Services.AddHttpClient("PollyClient")
     });
 
 builder.Services.AddTransient<IApiServices, ApiServices>();
+builder.Services.AddTransient<IFileServices, FileServices>();
 builder.Services.AddMemoryCache(); // Enable in-memory caching
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(); // Enable Swagger for API documentation
