@@ -41,7 +41,6 @@ namespace OneStreamFrontEndApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> GetAsync()
         {
-            //var api2Responses = await _frontEndServices.CallApiAsync("api2Data429", "https://httpstat.us/502");
             var result = await GetResultsFrom2Apis();
             return Ok(new { Api1 = result.Api1Response, Api2 = result.Api2Response });
         }
